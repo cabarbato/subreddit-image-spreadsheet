@@ -1,4 +1,4 @@
 psaw
-PIL
+Pillow
 pandas
 xlsxwriter
