@@ -24,22 +24,31 @@ file_formats = (".jpg", ".jpeg", ".png")
 
 class Subreddit:
     def __init__(self, sub):
+        self.row = 1
         self.sub = sub
-        self.data = []
         self.fields = ("subreddit", "created", "created_utc",
                        "title", "url", "image")
         self.output_dir = sub + "/"
         self.images_dir = self.output_dir + "images"
+        
         if not os.path.exists(self.images_dir):
             os.makedirs(self.images_dir)
+            
         self.image_files = os.listdir(self.images_dir)
         self.workbook = xlsxwriter.Workbook(self.output_dir + 'data.xlsx')
         self.worksheet = self.workbook.add_worksheet()
         self.worksheet.set_default_row(75)
         self.worksheet.set_default_row(300)
+        
+        col_index = 0
+        
+        while col_index < len(self.fields):
+            self.worksheet.write(0, col_index, self.fields[col_index])
+            col_index += 1
 
     def addRow(self, data, url):
         # Collect post data and image for each row to write to spreadsheet
+        col_index = 0
         cols = []
         for field in self.fields:
             try:
@@ -50,11 +59,16 @@ class Subreddit:
                     cols.append(self.downloadImage(url))
                 else:
                     cols.append(data.d_[field])
+                self.writeToXlsx(field, col_index)
+                col_index += 1
             except:
                 cols.append("")
-        self.writeToXlsx(cols)
+                col_index += 1
+        self.row += 1
 
     def downloadImage(self, url):
+        # Downloads the image from the url to the specified images folder
+        # TODO: all images are failing on download
         for root_url in root_urls:
             file = url.replace(root_url, '')
         try:
@@ -65,6 +79,7 @@ class Subreddit:
                         self.images_dir + file, mode='bx')
                     output_filehandle.write(image.content)
                     self.resizeImage(file)
+                    return file
                 except:
                     print('downloading ' + file + ' failed!')
                     pass
@@ -120,10 +135,13 @@ class Subreddit:
 
         except Exception as err:
             print(err)
+        
+        self.workbook.close()
             
-    def writeToXlsx(self, columns):
+    def writeToXlsx(self, data, col):
         # This is the method that actually writes everything to an .xlsx file
-        return
+        if self.fields[col] == "image": self.worksheet.insert_image(self.row, 1, self.images_dir + data, { 'x_scale': 0.5, 'y_scale': 0.5, 'x_offset': 5, 'y_offset': 5, 'positioning': 1 })
+        else: self.worksheet.write(self.row, col, data)
 
 
 if not sys.argv:
