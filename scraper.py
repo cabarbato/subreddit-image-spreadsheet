@@ -22,25 +22,27 @@ api = PushshiftAPI()
 root_urls = ("i.redd.it/", "imgur.com/")
 file_formats = (".jpg", ".jpeg", ".png")
 
+
 class Subreddit:
     def __init__(self, sub):
         self.row = 1
         self.sub = sub
         self.fields = ("subreddit", "created", "created_utc",
                        "title", "url", "image")
-        self.output_dir = "ouptput/" + sub + "/"
+        self.output_dir = "output/" + sub + "/"
         self.images_dir = self.output_dir + "images/"
-        
+
         if not os.path.exists(self.images_dir):
             os.makedirs(self.images_dir)
-            
+
         self.image_files = os.listdir(self.images_dir)
         self.workbook = xlsxwriter.Workbook(self.output_dir + 'data.xlsx')
         self.worksheet = self.workbook.add_worksheet()
-        self.worksheet.set_default_row(75)
-        
+        self.worksheet.set_default_row(300)
+        self.worksheet.set_column(0, len(self.fields) - 1, 30)
+
         col_index = 0
-        
+
         while col_index < len(self.fields):
             self.worksheet.write(0, col_index, self.fields[col_index])
             col_index += 1
@@ -53,20 +55,24 @@ class Subreddit:
                 if field == "created":
                     date = datetime.fromtimestamp(data.d_[field])
                     cell_data = date.ctime()
-                elif field == "image": cell_data = self.downloadImage(url)
-                else: cell_data = data.d_[field]
+                elif field == "image":
+                    cell_data = self.downloadImage(url)
+                else:
+                    cell_data = data.d_[field]
                 self.writeToXlsx(cell_data, col_index)
                 col_index += 1
-            except: col_index += 1
+            except:
+                col_index += 1
         self.row += 1
 
     def downloadImage(self, url):
         # Downloads the image from the url to the specified images folder
         for root_url in root_urls:
             if root_url in url:
-                file = url.replace(root_url, '').replace('https://', '').replace('http://', '')
+                file = url.replace(root_url, '').replace(
+                    'https://', '').replace('http://', '')
                 break
-                
+
         if not os.path.isfile(self.images_dir + file):
             try:
                 image = requests.get(url, allow_redirects=False)
@@ -80,8 +86,10 @@ class Subreddit:
                     except:
                         print('downloading ' + file + ' failed!')
                         pass
-            except: print('Could not reach url')
-        else: return file
+            except:
+                print('Could not reach url')
+        else:
+            return file
 
     def getImgPost(self, row):
         # Only get rows with a url that's an image.
@@ -133,13 +141,21 @@ class Subreddit:
 
         except Exception as err:
             print(err)
-        
+
         self.workbook.close()
-            
+
     def writeToXlsx(self, data, col):
         # This is the method that actually writes everything to an .xlsx file
-        if self.fields[col] == "image": self.worksheet.insert_image(self.row, 1, self.images_dir + data, { 'x_scale': 0.5, 'y_scale': 0.5, 'x_offset': 5, 'y_offset': 5, 'positioning': 1 })
-        else: self.worksheet.write(self.row, col, data)
+        if self.fields[col] == "image":
+            self.worksheet.insert_image(self.row, col, self.images_dir + data, {
+                'x_scale': 0.5, 
+                'y_scale': 0.5, 
+                'x_offset': 5, 
+                'y_offset': 5, 
+                'positioning': 1
+                })
+        else:
+            self.worksheet.write(self.row, col, data)
 
 
 if not sys.argv:
