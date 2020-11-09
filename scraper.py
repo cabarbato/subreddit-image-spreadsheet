@@ -28,8 +28,8 @@ class Subreddit:
         self.sub = sub
         self.fields = ("subreddit", "created", "created_utc",
                        "title", "url", "image")
-        self.output_dir = sub + "/"
-        self.images_dir = self.output_dir + "images"
+        self.output_dir = "ouptput/" + sub + "/"
+        self.images_dir = self.output_dir + "images/"
         
         if not os.path.exists(self.images_dir):
             os.makedirs(self.images_dir)
@@ -38,7 +38,6 @@ class Subreddit:
         self.workbook = xlsxwriter.Workbook(self.output_dir + 'data.xlsx')
         self.worksheet = self.workbook.add_worksheet()
         self.worksheet.set_default_row(75)
-        self.worksheet.set_default_row(300)
         
         col_index = 0
         
@@ -49,41 +48,40 @@ class Subreddit:
     def addRow(self, data, url):
         # Collect post data and image for each row to write to spreadsheet
         col_index = 0
-        cols = []
         for field in self.fields:
             try:
                 if field == "created":
                     date = datetime.fromtimestamp(data.d_[field])
-                    cols.append(date.ctime())
-                elif field == "image":
-                    cols.append(self.downloadImage(url))
-                else:
-                    cols.append(data.d_[field])
-                self.writeToXlsx(field, col_index)
+                    cell_data = date.ctime()
+                elif field == "image": cell_data = self.downloadImage(url)
+                else: cell_data = data.d_[field]
+                self.writeToXlsx(cell_data, col_index)
                 col_index += 1
-            except:
-                cols.append("")
-                col_index += 1
+            except: col_index += 1
         self.row += 1
 
     def downloadImage(self, url):
         # Downloads the image from the url to the specified images folder
-        # TODO: all images are failing on download
         for root_url in root_urls:
-            file = url.replace(root_url, '')
-        try:
-            image = requests.get(file, allow_redirects=False)
-            if(image.status_code == 200):
-                try:
-                    output_filehandle = open(
-                        self.images_dir + file, mode='bx')
-                    output_filehandle.write(image.content)
-                    self.resizeImage(file)
-                    return file
-                except:
-                    print('downloading ' + file + ' failed!')
-                    pass
-        except: print('Could not reach url')
+            if root_url in url:
+                file = url.replace(root_url, '').replace('https://', '').replace('http://', '')
+                break
+                
+        if not os.path.isfile(self.images_dir + file):
+            try:
+                image = requests.get(url, allow_redirects=False)
+                if(image.status_code == 200):
+                    try:
+                        output_filehandle = open(
+                            self.images_dir + file, mode='bx')
+                        output_filehandle.write(image.content)
+                        self.resizeImage(file)
+                        return file
+                    except:
+                        print('downloading ' + file + ' failed!')
+                        pass
+            except: print('Could not reach url')
+        else: return file
 
     def getImgPost(self, row):
         # Only get rows with a url that's an image.
